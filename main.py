@@ -13,6 +13,8 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
 }
 
+USE_S3 = False
+
 
 session = boto3.session.Session()
 s3 = session.client(
@@ -143,7 +145,11 @@ def parse_mts(event, context):
         }
         parsed_tariffs.append(new_tariff)
 
-    write_s3('data.json', json.dumps(parsed_tariffs))
+    if USE_S3:
+        write_s3('data.json', json.dumps(parsed_tariffs))
+    else:
+        with open('data.json', 'w') as file:
+            json.dump(parsed_tariffs, file, indent=4, ensure_ascii=False, )
 
     return {
         'statusCode': 200,
