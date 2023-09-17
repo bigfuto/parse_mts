@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MTS tariffs</title>
+    <script src="https://unpkg.com/vue@2"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+
+    <!-- component template -->
+    <script type="text/x-template" id="grid-template">
+      <table>
+        <thead>
+          <tr>
+            <th v-for="key in columns"
+              @click="sortBy(key)"
+              :class="{ active: sortKey == key }">
+              {{ key | capitalize }}
+              <span class="arrow" :class="sortOrders[key] > 0 ? 'asc' : 'dsc'">
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="entry in filteredHeroes">
+            <td v-for="key in columns">
+              {{entry[key]}}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </script>
+  </head>
+  <body>
+    <!-- root element -->
+
+	<div id="parse">
+      <button @click="parse">parse the mts site</button>
+
+    </div>
+    <div id="first">
+      <form id="search">
+        Search <input name="query" v-model="searchQuery" />
+      </form>
+
+      <grid
+        :heroes="gridData"
+        :columns="gridColumns"
+        :filter-key="searchQuery"
+      >
+      </grid>
+    </div>
+
+    <script>
+      // register the grid component
+      Vue.component("grid", {
+        template: "#grid-template",
+        props: {
+          heroes: Array,
+          columns: Array,
+          filterKey: String
+        },
+        data: function() {
+          var sortOrders = {};
+          this.columns.forEach(function(key) {
+            sortOrders[key] = 1;
+          });
+          return {
+            sortKey: "",
+            sortOrders: sortOrders
+          };
+        },
+        computed: {
+          filteredHeroes: function() {
+            var sortKey = this.sortKey;
+            var filterKey = this.filterKey && this.filterKey.toLowerCase();
+            var order = this.sortOrders[sortKey] || 1;
+            var heroes = this.heroes;
+            if (filterKey) {
+              heroes = heroes.filter(function(row) {
+                return Object.keys(row).some(function(key) {
+                  return (
+                    String(row[key])
+                      .toLowerCase()
+                      .indexOf(filterKey) > -1
+                  );
+                });
+              });
+            }
+            if (sortKey) {
+              heroes = heroes.slice().sort(function(a, b) {
+                a = a[sortKey];
+                b = b[sortKey];
+                return (a === b ? 0 : a > b ? 1 : -1) * order;
+              });
+            }
+            return heroes;
+          }
+        },
+        filters: {
+          capitalize: function(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+          }
+        },
+        methods: {
+          sortBy: function(key) {
+            this.sortKey = key;
+            this.sortOrders[key] = this.sortOrders[key] * -1;
+          }
+        }
+      });
+
+
+
+	  var data_json = "data.json";
+      var first = new Vue({
+        el: "#first",
+        data: {
+          searchQuery: "",
+          gridColumns: ["tariffType", "title", "description", "Annotation", "benefits", "subscriptionFee",  "MinUnit", "smsUnit", "gbUnit", "gbitUnit", "channelsUnit", "tariffUrl"],
+          gridData: []
+        },
+		mounted() {
+			var self = this
+			$.getJSON(data_json, function(data) {
+			  self.gridData = data;
+			});
+		}
+      });
+		var app = new Vue({
+			el: '#parse',
+			methods:{
+				parse: function(){
+					axios.get('https://functions.yandexcloud.net/d4epqunf05e5ma56u9h4').then(() => location.reload())
+
+
+				}
+
+
+				}
+
+
+		});
+
+
+
+    </script>
+  </body>
+</html>

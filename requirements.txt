@@ -1,0 +1,4 @@
+beautifulsoup4==4.12.2
+boto3==1.28.49
+requests==2.31.0
+lxml==4.9.3
