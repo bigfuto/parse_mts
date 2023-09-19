@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Union
 import requests
 import boto3
 import os
@@ -25,11 +26,11 @@ s3 = session.client(
 )
 
 
-def write_s3(field, text) -> None:
+def write_s3(field: str, text: str) -> None:
     s3.put_object(Bucket=os.getenv('S3_FIELDS', 'parse-mts'), Key=field, Body=text)
 
 
-def get_actual_tariffs():
+def get_actual_tariffs() -> dict:
     response = requests.get(url, headers=headers)
     parse = bs(response.text, 'lxml')
     data = parse.find('script', string=re.compile("actualTariffs"))
@@ -37,27 +38,27 @@ def get_actual_tariffs():
     return tariffs['actualTariffs']
 
 
-def parse_mts(event, context):
+def parse_mts(event, context) -> dict:
     actual = get_actual_tariffs()
     parsed_tariffs = []
 
-    def get_annotation(tariff):
+    def get_annotation(tariff: dict) -> Union[None, str]:
         if "subscriptionFeeAnnotationSettings" in tariff:
             return tariff["subscriptionFeeAnnotationSettings"].get("text", None)
         return None
 
-    def get_link(tariff):
+    def get_link(tariff: dict) -> str:
         if "productInfoLink" in tariff and "value" in tariff["productInfoLink"]:
             return tariff["productInfoLink"]["value"]
         return f'{url}{tariff.get("alias")}'
 
-    def get_subscription_fee(tariff):
-        def _get_value(item):
+    def get_subscription_fee(tariff: dict) -> int:
+        def _get_value(item: dict) -> int:
             values = ("discountFee", "subscriptionFee", )
             for value in values:
                 if value in item:
-                    return item[value]["numValue"]
-            return None
+                    return int(item[value]["numValue"])
+            return 0
 
         if _get_value(tariff):
             return _get_value(tariff)
@@ -74,7 +75,7 @@ def parse_mts(event, context):
                         return int(tariff["parametrizedTariffSettings"]["defaultPackagePrice"])
         return 0
 
-    def get_unit(item, parameter):
+    def get_unit(item: dict, parameter: str) -> Union[None, int]:
 
         if "customizingType" in item:
             if item["customizingType"] == "Configurator":
@@ -86,7 +87,7 @@ def parse_mts(event, context):
                     if option["optionId"] == regulator:
                         for quota in option["quotas"]:
                             if parameter == quota["baseParameter"]:
-                                return quota["numValue"]
+                                return int(quota["numValue"])
             elif item["customizingType"] == "Parametrized":
                 params = {
                     "MinutesPackage": "Calls",
@@ -108,11 +109,11 @@ def parse_mts(event, context):
                     return int(unit["numValue"])
         return None
 
-    def get_benefits(tariff):
+    def get_benefits(tariff: dict) -> str:
         if "benefitsDescription" in tariff and "description" in tariff["benefitsDescription"]:
             return tariff["benefitsDescription"]["description"]
 
-    def clear_text(text):
+    def clear_text(text: str) -> str:
         pattern = {
             '&nbsp;': ' ',
             '&mdash;': '',
